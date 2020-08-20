@@ -16,7 +16,7 @@ extern crate rocket;
 
 fn main() {
     let matches = Command::new("🐺 Horde")
-        .about("A Fast, Secure and Reliable Terraform Backend, Set up in Minutes")
+        .about("A Disposable, Secure, Anonymous Email Server, Set up in Minutes")
         .version("0.1.0")
         .subcommand_required(true)
         .arg_required_else_help(true)
@@ -37,7 +37,7 @@ fn main() {
 
     match matches.subcommand() {
         // serve command
-        Some(("serve", _sub_matches)) => cmd::serve::serve(),
+        Some(("serve", _sub_matches)) => cmd::app::serve(),
 
         // migrate command
         Some(("migrate", _sub_matches)) => cmd::migrate::migrate(),

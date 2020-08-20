@@ -4,7 +4,6 @@
 
 pub mod health;
 pub mod home;
-pub mod lock;
-pub mod project;
+pub mod email;
+pub mod message;
 pub mod ready;
-pub mod state;

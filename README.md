@@ -1,7 +1,7 @@
 <p align="center">
     <img src="/static/logo.png" width="200" />
     <h3 align="center">Horde</h3>
-    <p align="center">A Fast, Secure and Reliable Terraform Backend, Set up in Minutes.</p>
+    <p align="center">A Disposable, Secure, Anonymous Email Server, Set up in Minutes.</p>
     <p align="center">
         <a href="https://github.com/Clivern/Horde/actions"><img src="https://github.com/Clivern/Horde/actions/workflows/build.yml/badge.svg"></a>
         <a href="https://github.com/Clivern/Horde/releases"><img src="https://img.shields.io/badge/Version-v0.1.0-green.svg"></a>
@@ -9,6 +9,7 @@
     </p>
 </p>
 
+Horde is a disposable, secure, anonymous email server. It allows to receive email at a temporary address that self-destructed after a certain time elapses. Moose is most advanced throwaway email service that helps you avoid spam and stay safe.
 
 ### Usage
 

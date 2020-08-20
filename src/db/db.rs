@@ -15,34 +15,65 @@ pub fn tables() {
 
     match client.expect("failed to migrate").batch_execute(
         "
-        CREATE  TABLE IF NOT EXISTS ho_project (
-            id                   integer  NOT NULL,
-            name                 varchar(100)  NOT NULL,
-            vers                 varchar(100)  NOT NULL,
-            created_at           timestamp  NOT NULL,
-            updated_at           timestamp  NOT NULL,
-            username             varchar(100)  NOT NULL,
-            secret               varchar(100)  NOT NULL,
-            CONSTRAINT pk_ho_project PRIMARY KEY ( id )
-         );
+        CREATE TABLE IF NOT EXISTS emails (
+            id                   SERIAL PRIMARY KEY,
+            uuid                 UUID NOT NULL UNIQUE,
+            email                VARCHAR(60) NOT NULL,
+            expire               BOOLEAN DEFAULT true,
+            expire_at            TIMESTAMP,
+            inserted_at          TIMESTAMP DEFAULT NOW(),
+            updated_at           TIMESTAMP DEFAULT NOW()
+        );
 
-        CREATE  TABLE IF NOT EXISTS ho_state (
-            id                   integer  NOT NULL,
-            name                 varchar(100),
-            val                  text  NOT NULL,
-            created_at           timestamp,
-            updated_at           timestamp,
-            project_id           integer  NOT NULL,
-            CONSTRAINT state_pkey PRIMARY KEY ( id )
-         );
+        CREATE TABLE IF NOT EXISTS emails_meta (
+            id                   SERIAL PRIMARY KEY,
+            key                  VARCHAR(255) NOT NULL,
+            value                TEXT NOT NULL,
+            email_id             INTEGER NOT NULL,
+            inserted_at          TIMESTAMP DEFAULT NOW(),
+            updated_at           TIMESTAMP DEFAULT NOW()
+        );
 
-        CREATE  TABLE IF NOT EXISTS ho_lock (
-            id                   integer  NOT NULL,
-            project_id           integer  NOT NULL,
-            created_at           timestamp  NOT NULL,
-            updated_at           timestamp  NOT NULL,
-            CONSTRAINT pk_ho_lock PRIMARY KEY ( id )
-         );
+        CREATE TABLE IF NOT EXISTS messages (
+            id                   SERIAL PRIMARY KEY,
+            uuid                 UUID NOT NULL UNIQUE,
+            from                 VARCHAR(255) NOT NULL,
+            subject              VARCHAR(255) NOT NULL,
+            content              TEXT NOT NULL,
+            email_id             INTEGER NOT NULL,
+            inserted_at          TIMESTAMP DEFAULT NOW(),
+            updated_at           TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS messages_meta (
+            id                   SERIAL PRIMARY KEY,
+            key                  VARCHAR(255) NOT NULL,
+            value                TEXT NOT NULL,
+            message_id           INTEGER NOT NULL,
+            inserted_at          TIMESTAMP DEFAULT NOW(),
+            updated_at           TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS attachments (
+            id                   SERIAL PRIMARY KEY,
+            uuid                 UUID NOT NULL UNIQUE,
+            filename             VARCHAR(255) NOT NULL,
+            content_type         VARCHAR(100) NOT NULL,
+            size                 BIGINT NOT NULL,
+            data                 BYTEA NOT NULL,
+            message_id           INTEGER NOT NULL,
+            inserted_at          TIMESTAMP DEFAULT NOW(),
+            updated_at           TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS attachments_meta (
+            id                   SERIAL PRIMARY KEY,
+            key                  VARCHAR(255) NOT NULL,
+            value                TEXT NOT NULL,
+            attachment_id        INTEGER NOT NULL,
+            inserted_at          TIMESTAMP DEFAULT NOW(),
+            updated_at           TIMESTAMP DEFAULT NOW()
+        );
     ",
     ) {
         Ok(_) => {
@@ -63,8 +94,11 @@ pub fn changes() {
 
     match client.expect("failed to migrate").batch_execute(
         "
-        ALTER TABLE ho_lock ADD CONSTRAINT fk_ho_lock_ho_project FOREIGN KEY ( project_id ) REFERENCES ho_project( id ) ON DELETE CASCADE ON UPDATE CASCADE;
-        ALTER TABLE ho_state ADD CONSTRAINT fk_ho_state_ho_project FOREIGN KEY ( project_id ) REFERENCES ho_project( id ) ON DELETE CASCADE ON UPDATE CASCADE;
+        ALTER TABLE emails_meta ADD CONSTRAINT fk_emails_meta_email_id FOREIGN KEY (email_id) REFERENCES emails(id) ON DELETE CASCADE ON UPDATE CASCADE;
+        ALTER TABLE messages ADD CONSTRAINT fk_messages_email_id FOREIGN KEY (email_id) REFERENCES emails(id) ON DELETE CASCADE ON UPDATE CASCADE;
+        ALTER TABLE messages_meta ADD CONSTRAINT fk_messages_meta_message_id FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE ON UPDATE CASCADE;
+        ALTER TABLE attachments ADD CONSTRAINT fk_attachments_message_id FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE ON UPDATE CASCADE;
+        ALTER TABLE attachments_meta ADD CONSTRAINT fk_attachments_meta_attachment_id FOREIGN KEY (attachment_id) REFERENCES attachments(id) ON DELETE CASCADE ON UPDATE CASCADE;
     ",
     ) {
         Ok(_) => {}
