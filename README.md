@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="/static/logo.png" width="250" />
+    <img src="/static/logo.png" width="200" />
     <h3 align="center">Horde</h3>
     <p align="center">A Fast, Secure and Reliable Terraform Backend, Set up in Minutes.</p>
     <p align="center">
