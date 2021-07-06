@@ -23,6 +23,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
             .iter()
             .map(|x| x.name().to_string())
             .collect();
+
         if keys.contains(&"x-api-key".to_owned()) {
             let value = request.headers().get("x-api-key").next().unwrap();
             return Outcome::Success(ApiKey(value.to_string()));
