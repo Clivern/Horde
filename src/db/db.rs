@@ -10,9 +10,7 @@ use crate::util;
 pub fn tables() {
     let rocket_config =
         util::config::get_env("ROCKET_CONFIG", util::config::get_config_path().as_str());
-
     let config = util::config::get_configs(rocket_config.to_string());
-
     let client = Client::connect(config.global.db.as_str(), NoTls);
 
     match client.expect("failed to migrate").batch_execute(
@@ -60,9 +58,7 @@ pub fn tables() {
 pub fn changes() {
     let rocket_config =
         util::config::get_env("ROCKET_CONFIG", util::config::get_config_path().as_str());
-
     let config = util::config::get_configs(rocket_config.to_string());
-
     let client = Client::connect(config.global.db.as_str(), NoTls);
 
     match client.expect("failed to migrate").batch_execute(
