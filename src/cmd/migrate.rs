@@ -5,5 +5,6 @@
 use crate::db;
 
 pub fn migrate() {
-    db::db::migrate();
+    db::db::tables();
+    db::db::changes();
 }

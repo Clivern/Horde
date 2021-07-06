@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="/static/logo.png" width="200" />
+    <img src="/static/logo.png" width="250" />
     <h3 align="center">Horde</h3>
     <p align="center">A Fast, Secure and Reliable Terraform Backend, Set up in Minutes.</p>
     <p align="center">
@@ -18,6 +18,21 @@ To install and run `Horde`, Please do the following:
 $ cargo install horde-rs
 $ export ROCKET_CONFIG=/etc/rocket.toml
 $ horde -s
+```
+
+
+### Docker
+
+To run postgresql with docker
+
+```zsh
+$ docker run -itd \
+  -e POSTGRES_USER=root \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=horde \
+  -p 5432:5432 \
+  --name horde \
+  postgres:latest
 ```
 
 

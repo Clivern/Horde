@@ -3,9 +3,17 @@
 // license that can be found in the LICENSE file.
 
 use postgres::{Client, NoTls};
+use std::process;
 
-pub fn migrate() {
-    let client = Client::connect("postgresql://horde:horde@127.0.0.1:5432/horde", NoTls);
+use crate::util;
+
+pub fn tables() {
+    let rocket_config =
+        util::config::get_env("ROCKET_CONFIG", util::config::get_config_path().as_str());
+
+    let config = util::config::get_configs(rocket_config.to_string());
+
+    let client = Client::connect(config.app.db.as_str(), NoTls);
 
     match client.expect("failed to migrate").batch_execute(
         "
@@ -37,9 +45,6 @@ pub fn migrate() {
 			updated_at           timestamp  NOT NULL  ,
 			CONSTRAINT pk_ho_lock PRIMARY KEY ( id )
 		 );
-
-		ALTER TABLE ho_lock ADD CONSTRAINT fk_ho_lock_ho_project FOREIGN KEY ( project_id ) REFERENCES ho_project( id ) ON DELETE CASCADE ON UPDATE CASCADE;
-		ALTER TABLE ho_state ADD CONSTRAINT fk_ho_state_ho_project FOREIGN KEY ( project_id ) REFERENCES ho_project( id ) ON DELETE CASCADE ON UPDATE CASCADE;
 	",
     ) {
         Ok(_) => {
@@ -47,6 +52,26 @@ pub fn migrate() {
         }
         Err(err) => {
             println!("Error while migration: {:?}", err);
+            process::exit(1);
         }
+    }
+}
+
+pub fn changes() {
+    let rocket_config =
+        util::config::get_env("ROCKET_CONFIG", util::config::get_config_path().as_str());
+
+    let config = util::config::get_configs(rocket_config.to_string());
+
+    let client = Client::connect(config.app.db.as_str(), NoTls);
+
+    match client.expect("failed to migrate").batch_execute(
+        "
+		ALTER TABLE ho_lock ADD CONSTRAINT fk_ho_lock_ho_project FOREIGN KEY ( project_id ) REFERENCES ho_project( id ) ON DELETE CASCADE ON UPDATE CASCADE;
+		ALTER TABLE ho_state ADD CONSTRAINT fk_ho_state_ho_project FOREIGN KEY ( project_id ) REFERENCES ho_project( id ) ON DELETE CASCADE ON UPDATE CASCADE;
+	",
+    ) {
+        Ok(_) => {}
+        Err(_) => {}
     }
 }

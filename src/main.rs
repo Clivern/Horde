@@ -7,6 +7,7 @@
 mod cmd;
 mod controller;
 mod db;
+mod util;
 
 use clap::Command;
 
