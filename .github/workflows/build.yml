@@ -18,6 +18,9 @@ jobs:
         rust-version: ${{ matrix.rust }}
     - uses: actions/checkout@master
 
+    - name: Set nightly
+      run: rustup override set nightly
+
     - name: Run config
       run: make config
 
