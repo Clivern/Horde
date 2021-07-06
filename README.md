@@ -1,7 +1,7 @@
 <p align="center">
     <img src="/static/logo.png" width="200" />
     <h3 align="center">Clive</h3>
-    <p align="center">Fast, Secure and Reliable Terraform Backend, Set up in Minutes.</p>
+    <p align="center">A Fast, Secure and Reliable Terraform Backend, Set up in Minutes.</p>
     <p align="center">
         <a href="https://github.com/Clivern/Clive/actions"><img src="https://github.com/Clivern/Clive/actions/workflows/build.yml/badge.svg"></a>
         <a href="https://github.com/Clivern/Clive/releases"><img src="https://img.shields.io/badge/Version-v0.1.0-green.svg"></a>
