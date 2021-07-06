@@ -5,13 +5,21 @@
 use crate::util;
 use postgres::{Client, NoTls};
 
-pub fn get_client() -> Result<Client, String> {
-    let rocket_config =
-        util::config::get_env("ROCKET_CONFIG", util::config::get_config_path().as_str());
-    let config = util::config::get_configs(rocket_config.to_string());
+pub struct Database {
+    client: Client,
+}
 
-    match Client::connect(config.global.db.as_str(), NoTls) {
-        Ok(client) => Ok(client),
-        Err(_err) => Err(String::from("Unable to establish database connection!")),
+impl Database {
+    fn new() -> Result<Database, String> {
+        let rocket_config = util::config::get_env(
+            "ROCKET_CONFIG",
+            util::config::get_config_path().as_str(),
+        );
+        let config = util::config::get_configs(rocket_config.to_string());
+
+        match Client::connect(config.global.db.as_str(), NoTls) {
+            Ok(client) => Ok(Database { client: client }),
+            Err(_err) => Err(String::from("Unable to establish database connection!")),
+        }
     }
 }
