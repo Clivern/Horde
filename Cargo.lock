@@ -182,17 +182,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clive"
-version = "0.1.0"
-dependencies = [
- "clap",
- "rocket",
- "serde",
- "serde_json",
- "serde_with",
-]
-
-[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -496,6 +485,17 @@ checksum = "c1441c6b1e930e2817404b5046f1f989899143a12bf92de603b69f4e0aee1e15"
 dependencies = [
  "crypto-mac",
  "digest",
+]
+
+[[package]]
+name = "horde-rs"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "rocket",
+ "serde",
+ "serde_json",
+ "serde_with",
 ]
 
 [[package]]

@@ -4,7 +4,7 @@ rustup ?= rustup
 
 help: Makefile
 	@echo
-	@echo " Choose a command run in Bazooka:"
+	@echo " Choose a command run in Horde:"
 	@echo
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 	@echo

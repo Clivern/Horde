@@ -13,7 +13,7 @@ use clap::Command;
 extern crate rocket;
 
 fn main() {
-    let matches = Command::new("🐺 clive")
+    let matches = Command::new("🐺 Horde")
         .about("A Fast, Secure and Reliable Terraform Backend, Set up in Minutes")
         .version("0.1.0")
         .subcommand_required(true)
