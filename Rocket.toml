@@ -10,3 +10,7 @@ port = 8000
 
 [production.server]
 port = 8000
+
+
+[default.databases.db]
+url = "postgres://root:password@localhost:5432/horde"

@@ -2,9 +2,8 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
-use rocket::response::content;
+use crate::db;
 
-#[get("/api/v1/tf")]
-pub fn tfv1() -> content::Json<&'static str> {
-    content::Json("{\"status\":\"ok\"}")
+pub fn migrate() {
+    db::db::migrate();
 }

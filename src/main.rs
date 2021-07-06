@@ -6,6 +6,7 @@
 
 mod cmd;
 mod controller;
+mod db;
 
 use clap::Command;
 
@@ -25,11 +26,20 @@ fn main() {
                 .long_flag("serve")
                 .about("Serve the application"),
         )
+        .subcommand(
+            Command::new("migrate")
+                .short_flag('m')
+                .long_flag("migrate")
+                .about("Migrate the database"),
+        )
         .get_matches();
 
     match matches.subcommand() {
         // serve command
         Some(("serve", _sub_matches)) => cmd::serve::serve(),
+
+        // migrate command
+        Some(("migrate", _sub_matches)) => cmd::migrate::migrate(),
         _ => unreachable!(),
     }
 }
