@@ -10,11 +10,11 @@ use toml;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub app: DatabaseConfig,
+    pub global: AppConfig,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DatabaseConfig {
+pub struct AppConfig {
     pub db: String,
     pub api: String,
 }

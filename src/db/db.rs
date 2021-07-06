@@ -13,7 +13,7 @@ pub fn tables() {
 
     let config = util::config::get_configs(rocket_config.to_string());
 
-    let client = Client::connect(config.app.db.as_str(), NoTls);
+    let client = Client::connect(config.global.db.as_str(), NoTls);
 
     match client.expect("failed to migrate").batch_execute(
         "
@@ -63,7 +63,7 @@ pub fn changes() {
 
     let config = util::config::get_configs(rocket_config.to_string());
 
-    let client = Client::connect(config.app.db.as_str(), NoTls);
+    let client = Client::connect(config.global.db.as_str(), NoTls);
 
     match client.expect("failed to migrate").batch_execute(
         "

@@ -17,7 +17,12 @@ To install and run `Horde`, Please do the following:
 ```zsh
 $ cargo install horde-rs
 $ export ROCKET_CONFIG=/etc/rocket.toml
-$ horde -s
+
+# Migrate database
+$ horde-rs migrate
+
+# Run web application
+$ horde-rs serve
 ```
 
 
