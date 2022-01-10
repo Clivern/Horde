@@ -1,0 +1,12 @@
+[package]
+name = "bazooka"
+version = "0.1.0"
+authors = ["Clivern <hello@clivern.com>"]
+edition = "2021"
+description = "Command Line Tool for Database Backup and Restore"
+license = "MIT"
+repository = "https://github.com/Clivern/Bazooka"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
