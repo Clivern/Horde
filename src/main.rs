@@ -1,4 +1,4 @@
-// Copyright 2022 Clivern. All rights reserved.
+// Copyright 2025 Clivern. All rights reserved.
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
@@ -20,10 +20,10 @@ fn main() {
         .arg_required_else_help(true)
         .author("Clivern")
         .subcommand(
-            Command::new("serve")
-                .short_flag('s')
-                .long_flag("serve")
-                .about("Serve the application"),
+            Command::new("app")
+                .short_flag('a')
+                .long_flag("app")
+                .about("Run the application"),
         )
         .subcommand(
             Command::new("migrate")
@@ -31,16 +31,27 @@ fn main() {
                 .long_flag("migrate")
                 .about("Migrate the database"),
         )
+        .subcommand(
+            Command::new("smtp")
+                .short_flag('s')
+                .long_flag("smtp")
+                .about("Run the SMTP server"),
+        )
         .get_matches();
 
     match matches.subcommand() {
-        // serve command
-        Some(("serve", _sub_matches)) => {
-            tokio::runtime::Runtime::new().unwrap().block_on(cmd::app::serve());
-        },
+        // app command
+        Some(("app", _sub_matches)) => {
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(cmd::app::run());
+        }
 
         // migrate command
         Some(("migrate", _sub_matches)) => cmd::migrate::migrate(),
+
+        // smtp command
+        Some(("smtp", _sub_matches)) => cmd::smtp::run(),
         _ => unreachable!(),
     }
 }
