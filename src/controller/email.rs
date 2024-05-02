@@ -2,23 +2,20 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
-use crate::cmd::serve::BasicAuth;
-use rocket::response::content;
+use rocket::serde::json::Json;
+use serde_json::json;
+use uuid::Uuid;
 
-#[put("/api/v1/<_project>/<_version>/lock")]
-pub fn lock(
-    basic_auth: BasicAuth,
-    _project: String,
-    _version: String,
-) -> content::Json<&'static str> {
-    content::Json("{\"status\":\"ok\"}")
-}
+#[post("/api/v1/email")]
+pub fn generate_random_email() -> Json<serde_json::Value> {
+    let random_id = Uuid::new_v4();
+    let email = format!("{}@horde.local", random_id);
 
-#[put("/api/v1/<_project>/<_version>/unlock")]
-pub fn unlock(
-    basic_auth: BasicAuth,
-    _project: String,
-    _version: String,
-) -> content::Json<&'static str> {
-    content::Json("{\"status\":\"ok\"}")
+    let response = json!({
+        "email": email,
+        "status": "success",
+        "message": "Random email generated successfully"
+    });
+
+    Json(response)
 }

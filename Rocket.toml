@@ -1,7 +1,7 @@
 [global]
 address = "0.0.0.0"
 environment = "development"
-db = "postgres://root:password@localhost:5432/horde"
+db = "horde.db"
 api = "6af73b25-2432-4b79-af86-e7a14da8debc"
 
 [development.server]

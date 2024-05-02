@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::util;
-use postgres::{Client, NoTls, Row};
+use rusqlite::{Connection, Row, params};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -44,7 +44,7 @@ pub struct Attachment {
 }
 
 pub struct Database {
-    client: Client,
+    conn: Connection,
 }
 
 impl Database {
@@ -56,8 +56,12 @@ impl Database {
 
         let config = util::config::get_configs(rocket_config.to_string());
 
-        match Client::connect(config.global.db.as_str(), NoTls) {
-            Ok(client) => Ok(Database { client: client }),
+        match Connection::open(&config.global.db) {
+            Ok(conn) => {
+                // Enable foreign key constraints
+                conn.execute("PRAGMA foreign_keys = ON", []).unwrap();
+                Ok(Database { conn })
+            },
             Err(_err) => Err(String::from("Unable to establish database connection!")),
         }
     }
@@ -70,41 +74,60 @@ impl Database {
         expire_at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Email, String> {
         let uuid = Uuid::new_v4();
-        let query = "INSERT INTO emails (uuid, email, expire, expire_at) VALUES ($1, $2, $3, $4) RETURNING *";
+        let query = "INSERT INTO emails (uuid, email, expire, expire_at) VALUES (?1, ?2, ?3, ?4)";
 
-        match self
-            .client
-            .query_one(query, &[&uuid, &email, &expire, &expire_at])
-        {
-            Ok(row) => Ok(self.row_to_email(row)),
+        match self.conn.execute(
+            query,
+            params![uuid.to_string(), email, expire, expire_at],
+        ) {
+            Ok(_) => {
+                // Get the last inserted row
+                let id = self.conn.last_insert_rowid() as i32;
+                self.get_email_by_id(id)
+            }
             Err(e) => Err(format!("Failed to create email: {}", e)),
         }
     }
 
-    pub fn get_email_by_uuid(&self, uuid: &Uuid) -> Result<Option<Email>, String> {
-        let query = "SELECT * FROM emails WHERE uuid = $1";
+    fn get_email_by_id(&self, id: i32) -> Result<Email, String> {
+        let query = "SELECT * FROM emails WHERE id = ?1";
 
-        match self.client.query_opt(query, &[uuid]) {
-            Ok(Some(row)) => Ok(Some(self.row_to_email(row))),
-            Ok(None) => Ok(None),
+        match self.conn.query_row(query, params![id], |row| {
+            self.row_to_email(row)
+        }) {
+            Ok(email) => Ok(email),
+            Err(e) => Err(format!("Failed to get email: {}", e)),
+        }
+    }
+
+    pub fn get_email_by_uuid(&self, uuid: &Uuid) -> Result<Option<Email>, String> {
+        let query = "SELECT * FROM emails WHERE uuid = ?1";
+
+        match self.conn.query_row(query, params![uuid.to_string()], |row| {
+            self.row_to_email(row)
+        }) {
+            Ok(email) => Ok(Some(email)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(format!("Failed to get email: {}", e)),
         }
     }
 
     pub fn get_email_by_address(&self, email: &str) -> Result<Option<Email>, String> {
-        let query = "SELECT * FROM emails WHERE email = $1";
+        let query = "SELECT * FROM emails WHERE email = ?1";
 
-        match self.client.query_opt(query, &[&email]) {
-            Ok(Some(row)) => Ok(Some(self.row_to_email(row))),
-            Ok(None) => Ok(None),
+        match self.conn.query_row(query, params![email], |row| {
+            self.row_to_email(row)
+        }) {
+            Ok(email) => Ok(Some(email)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(format!("Failed to get email: {}", e)),
         }
     }
 
     pub fn delete_email(&self, uuid: &Uuid) -> Result<(), String> {
-        let query = "DELETE FROM emails WHERE uuid = $1";
+        let query = "DELETE FROM emails WHERE uuid = ?1";
 
-        match self.client.execute(query, &[uuid]) {
+        match self.conn.execute(query, params![uuid.to_string()]) {
             Ok(_) => Ok(()),
             Err(e) => Err(format!("Failed to delete email: {}", e)),
         }
@@ -119,23 +142,39 @@ impl Database {
         email_id: i32,
     ) -> Result<Message, String> {
         let uuid = Uuid::new_v4();
-        let query = "INSERT INTO messages (uuid, from, subject, content, email_id) VALUES ($1, $2, $3, $4, $5) RETURNING *";
+        let query = "INSERT INTO messages (uuid, `from`, subject, content, email_id) VALUES (?1, ?2, ?3, ?4, ?5)";
 
-        match self
-            .client
-            .query_one(query, &[&uuid, &from, &subject, &content, &email_id])
-        {
-            Ok(row) => Ok(self.row_to_message(row)),
+        match self.conn.execute(
+            query,
+            params![uuid.to_string(), from, subject, content, email_id],
+        ) {
+            Ok(_) => {
+                let id = self.conn.last_insert_rowid() as i32;
+                self.get_message_by_id(id)
+            }
             Err(e) => Err(format!("Failed to create message: {}", e)),
         }
     }
 
-    pub fn get_message_by_uuid(&self, uuid: &Uuid) -> Result<Option<Message>, String> {
-        let query = "SELECT * FROM messages WHERE uuid = $1";
+    fn get_message_by_id(&self, id: i32) -> Result<Message, String> {
+        let query = "SELECT * FROM messages WHERE id = ?1";
 
-        match self.client.query_opt(query, &[uuid]) {
-            Ok(Some(row)) => Ok(Some(self.row_to_message(row))),
-            Ok(None) => Ok(None),
+        match self.conn.query_row(query, params![id], |row| {
+            self.row_to_message(row)
+        }) {
+            Ok(message) => Ok(message),
+            Err(e) => Err(format!("Failed to get message: {}", e)),
+        }
+    }
+
+    pub fn get_message_by_uuid(&self, uuid: &Uuid) -> Result<Option<Message>, String> {
+        let query = "SELECT * FROM messages WHERE uuid = ?1";
+
+        match self.conn.query_row(query, params![uuid.to_string()], |row| {
+            self.row_to_message(row)
+        }) {
+            Ok(message) => Ok(Some(message)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(format!("Failed to get message: {}", e)),
         }
     }
@@ -144,22 +183,35 @@ impl Database {
         &self,
         email_id: i32,
     ) -> Result<Vec<Message>, String> {
-        let query =
-            "SELECT * FROM messages WHERE email_id = $1 ORDER BY inserted_at DESC";
+        let query = "SELECT * FROM messages WHERE email_id = ?1 ORDER BY inserted_at DESC";
 
-        match self.client.query(query, &[&email_id]) {
-            Ok(rows) => Ok(rows
-                .into_iter()
-                .map(|row| self.row_to_message(row))
-                .collect()),
-            Err(e) => Err(format!("Failed to get messages: {}", e)),
+        let mut stmt = match self.conn.prepare(query) {
+            Ok(stmt) => stmt,
+            Err(e) => return Err(format!("Failed to prepare query: {}", e)),
+        };
+
+        let message_iter = match stmt.query_map(params![email_id], |row| {
+            self.row_to_message(row)
+        }) {
+            Ok(iter) => iter,
+            Err(e) => return Err(format!("Failed to execute query: {}", e)),
+        };
+
+        let mut messages = Vec::new();
+        for message in message_iter {
+            match message {
+                Ok(msg) => messages.push(msg),
+                Err(e) => return Err(format!("Failed to process message: {}", e)),
+            }
         }
+
+        Ok(messages)
     }
 
     pub fn delete_message(&self, uuid: &Uuid) -> Result<(), String> {
-        let query = "DELETE FROM messages WHERE uuid = $1";
+        let query = "DELETE FROM messages WHERE uuid = ?1";
 
-        match self.client.execute(query, &[uuid]) {
+        match self.conn.execute(query, params![uuid.to_string()]) {
             Ok(_) => Ok(()),
             Err(e) => Err(format!("Failed to delete message: {}", e)),
         }
@@ -174,15 +226,29 @@ impl Database {
         message_id: i32,
     ) -> Result<Attachment, String> {
         let uuid = Uuid::new_v4();
-        let size = data.len() as i64;
-        let query = "INSERT INTO attachments (uuid, filename, content_type, size, data, message_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *";
+        let size = data.len() as i32;
+        let query = "INSERT INTO attachments (uuid, filename, content_type, size, data, message_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
 
-        match self.client.query_one(
+        match self.conn.execute(
             query,
-            &[&uuid, &filename, &content_type, &size, &data, &message_id],
+            params![uuid.to_string(), filename, content_type, size, data, message_id],
         ) {
-            Ok(row) => Ok(self.row_to_attachment(row)),
+            Ok(_) => {
+                let id = self.conn.last_insert_rowid() as i32;
+                self.get_attachment_by_id(id)
+            }
             Err(e) => Err(format!("Failed to create attachment: {}", e)),
+        }
+    }
+
+    fn get_attachment_by_id(&self, id: i32) -> Result<Attachment, String> {
+        let query = "SELECT * FROM attachments WHERE id = ?1";
+
+        match self.conn.query_row(query, params![id], |row| {
+            self.row_to_attachment(row)
+        }) {
+            Ok(attachment) => Ok(attachment),
+            Err(e) => Err(format!("Failed to get attachment: {}", e)),
         }
     }
 
@@ -190,11 +256,13 @@ impl Database {
         &self,
         uuid: &Uuid,
     ) -> Result<Option<Attachment>, String> {
-        let query = "SELECT * FROM attachments WHERE uuid = $1";
+        let query = "SELECT * FROM attachments WHERE uuid = ?1";
 
-        match self.client.query_opt(query, &[uuid]) {
-            Ok(Some(row)) => Ok(Some(self.row_to_attachment(row))),
-            Ok(None) => Ok(None),
+        match self.conn.query_row(query, params![uuid.to_string()], |row| {
+            self.row_to_attachment(row)
+        }) {
+            Ok(attachment) => Ok(Some(attachment)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(format!("Failed to get attachment: {}", e)),
         }
     }
@@ -203,22 +271,35 @@ impl Database {
         &self,
         message_id: i32,
     ) -> Result<Vec<Attachment>, String> {
-        let query =
-            "SELECT * FROM attachments WHERE message_id = $1 ORDER BY inserted_at ASC";
+        let query = "SELECT * FROM attachments WHERE message_id = ?1 ORDER BY inserted_at ASC";
 
-        match self.client.query(query, &[&message_id]) {
-            Ok(rows) => Ok(rows
-                .into_iter()
-                .map(|row| self.row_to_attachment(row))
-                .collect()),
-            Err(e) => Err(format!("Failed to get attachments: {}", e)),
+        let mut stmt = match self.conn.prepare(query) {
+            Ok(stmt) => stmt,
+            Err(e) => return Err(format!("Failed to prepare query: {}", e)),
+        };
+
+        let attachment_iter = match stmt.query_map(params![message_id], |row| {
+            self.row_to_attachment(row)
+        }) {
+            Ok(iter) => iter,
+            Err(e) => return Err(format!("Failed to execute query: {}", e)),
+        };
+
+        let mut attachments = Vec::new();
+        for attachment in attachment_iter {
+            match attachment {
+                Ok(att) => attachments.push(att),
+                Err(e) => return Err(format!("Failed to process attachment: {}", e)),
+            }
         }
+
+        Ok(attachments)
     }
 
     pub fn delete_attachment(&self, uuid: &Uuid) -> Result<(), String> {
-        let query = "DELETE FROM attachments WHERE uuid = $1";
+        let query = "DELETE FROM attachments WHERE uuid = ?1";
 
-        match self.client.execute(query, &[uuid]) {
+        match self.conn.execute(query, params![uuid.to_string()]) {
             Ok(_) => Ok(()),
             Err(e) => Err(format!("Failed to delete attachment: {}", e)),
         }
@@ -231,11 +312,24 @@ impl Database {
         key: &str,
         value: &str,
     ) -> Result<(), String> {
-        let query = "INSERT INTO emails_meta (email_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (email_id, key) DO UPDATE SET value = $3, updated_at = NOW()";
+        // First try to update existing record
+        let update_query = "UPDATE emails_meta SET value = ?1, updated_at = CURRENT_TIMESTAMP WHERE email_id = ?2 AND key = ?3";
 
-        match self.client.execute(query, &[&email_id, &key, &value]) {
+        match self.conn.execute(update_query, params![value, email_id, key]) {
+            Ok(rows_affected) => {
+                if rows_affected > 0 {
+                    return Ok(());
+                }
+            }
+            Err(e) => return Err(format!("Failed to update email metadata: {}", e)),
+        }
+
+        // If no rows were affected, insert new record
+        let insert_query = "INSERT INTO emails_meta (email_id, key, value) VALUES (?1, ?2, ?3)";
+
+        match self.conn.execute(insert_query, params![email_id, key, value]) {
             Ok(_) => Ok(()),
-            Err(e) => Err(format!("Failed to set email metadata: {}", e)),
+            Err(e) => Err(format!("Failed to insert email metadata: {}", e)),
         }
     }
 
@@ -243,59 +337,72 @@ impl Database {
         &self,
         email_id: i32,
     ) -> Result<HashMap<String, String>, String> {
-        let query = "SELECT key, value FROM emails_meta WHERE email_id = $1";
+        let query = "SELECT key, value FROM emails_meta WHERE email_id = ?1";
 
-        match self.client.query(query, &[&email_id]) {
-            Ok(rows) => {
-                let mut meta = HashMap::new();
-                for row in rows {
-                    let key: String = row.get("key");
-                    let value: String = row.get("value");
+        let mut stmt = match self.conn.prepare(query) {
+            Ok(stmt) => stmt,
+            Err(e) => return Err(format!("Failed to prepare query: {}", e)),
+        };
+
+        let meta_iter = match stmt.query_map(params![email_id], |row| {
+            let key: String = row.get("key")?;
+            let value: String = row.get("value")?;
+            Ok((key, value))
+        }) {
+            Ok(iter) => iter,
+            Err(e) => return Err(format!("Failed to execute query: {}", e)),
+        };
+
+        let mut meta = HashMap::new();
+        for item in meta_iter {
+            match item {
+                Ok((key, value)) => {
                     meta.insert(key, value);
                 }
-                Ok(meta)
+                Err(e) => return Err(format!("Failed to process metadata: {}", e)),
             }
-            Err(e) => Err(format!("Failed to get email metadata: {}", e)),
         }
+
+        Ok(meta)
     }
 
     // Helper methods to convert rows to structs
-    fn row_to_email(&self, row: Row) -> Email {
-        Email {
-            id: row.get("id"),
-            uuid: row.get("uuid"),
-            email: row.get("email"),
-            expire: row.get("expire"),
-            expire_at: row.get("expire_at"),
-            inserted_at: row.get("inserted_at"),
-            updated_at: row.get("updated_at"),
-        }
+    fn row_to_email(&self, row: &Row) -> Result<Email, rusqlite::Error> {
+        Ok(Email {
+            id: row.get("id")?,
+            uuid: Uuid::parse_str(&row.get::<_, String>("uuid")?).map_err(|_e| rusqlite::Error::InvalidColumnType(0, "uuid".to_string(), rusqlite::types::Type::Text))?,
+            email: row.get("email")?,
+            expire: row.get("expire")?,
+            expire_at: row.get("expire_at")?,
+            inserted_at: row.get("inserted_at")?,
+            updated_at: row.get("updated_at")?,
+        })
     }
 
-    fn row_to_message(&self, row: Row) -> Message {
-        Message {
-            id: row.get("id"),
-            uuid: row.get("uuid"),
-            from: row.get("from"),
-            subject: row.get("subject"),
-            content: row.get("content"),
-            email_id: row.get("email_id"),
-            inserted_at: row.get("inserted_at"),
-            updated_at: row.get("updated_at"),
-        }
+    fn row_to_message(&self, row: &Row) -> Result<Message, rusqlite::Error> {
+        Ok(Message {
+            id: row.get("id")?,
+            uuid: Uuid::parse_str(&row.get::<_, String>("uuid")?).map_err(|_e| rusqlite::Error::InvalidColumnType(0, "uuid".to_string(), rusqlite::types::Type::Text))?,
+            from: row.get("`from`")?,
+            subject: row.get("subject")?,
+            content: row.get("content")?,
+            email_id: row.get("email_id")?,
+            inserted_at: row.get("inserted_at")?,
+            updated_at: row.get("updated_at")?,
+        })
     }
 
-    fn row_to_attachment(&self, row: Row) -> Attachment {
-        Attachment {
-            id: row.get("id"),
-            uuid: row.get("uuid"),
-            filename: row.get("filename"),
-            content_type: row.get("content_type"),
-            size: row.get("size"),
-            data: row.get("data"),
-            message_id: row.get("message_id"),
-            inserted_at: row.get("inserted_at"),
-            updated_at: row.get("updated_at"),
-        }
+    fn row_to_attachment(&self, row: &Row) -> Result<Attachment, rusqlite::Error> {
+        Ok(Attachment {
+            id: row.get("id")?,
+            uuid: Uuid::parse_str(&row.get::<_, String>("uuid")?).map_err(|_e| rusqlite::Error::InvalidColumnType(0, "uuid".to_string(), rusqlite::types::Type::Text))?,
+            filename: row.get("filename")?,
+            content_type: row.get("content_type")?,
+            size: row.get::<_, i32>("size")? as i64,
+            data: row.get("data")?,
+            message_id: row.get("message_id")?,
+            inserted_at: row.get("inserted_at")?,
+            updated_at: row.get("updated_at")?,
+        })
     }
 }

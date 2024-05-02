@@ -9,7 +9,7 @@
     </p>
 </p>
 
-Horde is a disposable, secure, anonymous email server. It allows to receive email at a temporary address that self-destructed after a certain time elapses. Moose is most advanced throwaway email service that helps you avoid spam and stay safe.
+Horde is a disposable, secure, anonymous email server. It allows to receive email at a temporary address that self-destructed after a certain time elapses. Horde is most advanced throwaway email service that helps you avoid spam and stay safe.
 
 ### Usage
 

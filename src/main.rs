@@ -2,8 +2,6 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
-#![feature(proc_macro_hygiene, decl_macro)]
-
 mod cmd;
 mod controller;
 mod db;
@@ -37,7 +35,9 @@ fn main() {
 
     match matches.subcommand() {
         // serve command
-        Some(("serve", _sub_matches)) => cmd::app::serve(),
+        Some(("serve", _sub_matches)) => {
+            tokio::runtime::Runtime::new().unwrap().block_on(cmd::app::serve());
+        },
 
         // migrate command
         Some(("migrate", _sub_matches)) => cmd::migrate::migrate(),

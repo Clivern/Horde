@@ -2,9 +2,11 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
-use rocket::response::content;
+use rocket::serde::json::Json;
+use serde_json::json;
 
 #[get("/_ready")]
-pub fn ready() -> content::Json<&'static str> {
-    content::Json("{\"status\":\"ok\"}")
+pub fn ready() -> Json<serde_json::Value> {
+    let response = json!({"status": "ok"});
+    Json(response)
 }
