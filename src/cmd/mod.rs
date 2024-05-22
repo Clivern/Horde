@@ -5,3 +5,4 @@
 pub mod app;
 pub mod migrate;
 pub mod smtp;
+pub mod truncate;

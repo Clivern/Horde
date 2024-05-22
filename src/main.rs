@@ -32,6 +32,12 @@ fn main() {
                 .about("Migrate the database"),
         )
         .subcommand(
+            Command::new("truncate")
+                .short_flag('t')
+                .long_flag("truncate")
+                .about("Truncate the database"),
+        )
+        .subcommand(
             Command::new("smtp")
                 .short_flag('s')
                 .long_flag("smtp")
@@ -49,6 +55,9 @@ fn main() {
 
         // migrate command
         Some(("migrate", _sub_matches)) => cmd::migrate::migrate(),
+
+        // truncate command
+        Some(("truncate", _sub_matches)) => cmd::truncate::truncate(),
 
         // smtp command
         Some(("smtp", _sub_matches)) => cmd::smtp::run(),

@@ -39,6 +39,7 @@ pub fn get_email_messages(email_uuid: String) -> Json<serde_json::Value> {
     ];
 
     let response = json!({
+        "email_uuid": email_uuid,
         "messages": messages,
         "total": messages.len(),
         "status": "success",

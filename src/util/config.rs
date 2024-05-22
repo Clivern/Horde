@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -16,7 +16,6 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub db: String,
-    pub api: String,
 }
 
 pub fn get_env(key: &str, def: &str) -> String {
@@ -63,6 +62,13 @@ pub fn get_config_path() -> String {
         .unwrap();
 
     return format!("{}/rocket.toml", package_base_path.display());
+}
+
+pub fn get_db_path() -> String {
+    let rocket_config = get_env("ROCKET_CONFIG", get_config_path().as_str());
+    let config = get_configs(rocket_config.to_string());
+
+    return config.global.db;
 }
 
 #[test]

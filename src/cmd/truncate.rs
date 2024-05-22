@@ -5,7 +5,7 @@
 use crate::db::migrate;
 use crate::util;
 
-/// Migrate the database
-pub fn migrate() {
-    migrate::up(util::config::get_db_path().as_str());
+/// Truncate the database
+pub fn truncate() {
+    migrate::down(util::config::get_db_path().as_str());
 }

@@ -27,21 +27,6 @@ $ horde-rs serve
 ```
 
 
-### Docker
-
-To run postgresql with docker
-
-```zsh
-$ docker run -itd \
-  -e POSTGRES_USER=root \
-  -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=horde \
-  -p 5432:5432 \
-  --name horde \
-  postgres:latest
-```
-
-
 ### Versioning
 
 For transparency into our release cycle and in striving to maintain backward compatibility, Horde is maintained under the [Semantic Versioning guidelines](https://semver.org/) and release process is predictable and business-friendly.

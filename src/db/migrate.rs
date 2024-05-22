@@ -5,13 +5,9 @@
 use rusqlite::Connection;
 use std::process;
 
-use crate::util;
-
-pub fn tables() {
-    let rocket_config =
-        util::config::get_env("ROCKET_CONFIG", util::config::get_config_path().as_str());
-    let config = util::config::get_configs(rocket_config.to_string());
-    let conn = Connection::open(&config.global.db).expect("Failed to open database");
+/// Migrate the database
+pub fn up(db_path: &str) {
+    let conn = Connection::open(db_path).expect("Failed to open database");
 
     let sql = "
         CREATE TABLE IF NOT EXISTS emails (
@@ -86,6 +82,29 @@ pub fn tables() {
         }
         Err(err) => {
             println!("Error while migration: {:?}", err);
+            process::exit(1);
+        }
+    }
+}
+
+/// Downgrade the database
+pub fn down(db_path: &str) {
+    let conn = Connection::open(db_path).expect("Failed to open database");
+
+    let sql = "DROP TABLE IF EXISTS emails;
+        DROP TABLE IF EXISTS emails_meta;
+        DROP TABLE IF EXISTS messages;
+        DROP TABLE IF EXISTS messages_meta;
+        DROP TABLE IF EXISTS attachments;
+        DROP TABLE IF EXISTS attachments_meta;
+    ";
+
+    match conn.execute_batch(sql) {
+        Ok(_) => {
+            println!("Database downgraded successfully!");
+        }
+        Err(err) => {
+            println!("Error while downgrading: {:?}", err);
             process::exit(1);
         }
     }
