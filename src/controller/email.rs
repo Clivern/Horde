@@ -37,21 +37,21 @@ pub fn generate_random_email() -> Json<serde_json::Value> {
                         }
                         Err(_) => {
                             return Json(json!({
-                                "errorMessage": "Error while creating email"
+                                "errorMessage": "Error! Internal server error"
                             }));
                         }
                     }
                 }
                 Err(_) => {
                     return Json(json!({
-                        "errorMessage": "Error while generating random email"
+                        "errorMessage": "Error! Internal server error"
                     }));
                 }
             }
         }
         Err(_) => {
             return Json(json!({
-                "errorMessage": "Error while connecting to database"
+                "errorMessage": "Error!Internal server error"
             }));
         }
     }
