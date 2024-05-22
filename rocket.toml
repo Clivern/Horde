@@ -2,6 +2,7 @@
 address = "0.0.0.0"
 environment = "development"
 db = "horde.db"
+domains = ["horde.io", "horde.app"]
 
 [development.server]
 port = 8000

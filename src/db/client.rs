@@ -3,9 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use crate::util;
+use rand::prelude::IndexedRandom;
+use rand::rng;
+use rand::Rng;
 use rusqlite::{params, Connection, Row};
 use std::collections::HashMap;
-use uuid::Uuid;
+use uuid::Uuid; // For random_range
+
+const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
+const USERNAME_LEN: usize = 10;
 
 #[derive(Debug)]
 pub struct Email {
@@ -48,15 +54,8 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new() -> Result<Database, String> {
-        let rocket_config = util::config::get_env(
-            "ROCKET_CONFIG",
-            util::config::get_config_path().as_str(),
-        );
-
-        let config = util::config::get_configs(rocket_config.to_string());
-
-        let conn = Connection::open(&config.global.db)
+    pub fn new(db_path: &str) -> Result<Database, String> {
+        let conn = Connection::open(db_path)
             .map_err(|e| format!("Unable to establish database connection! {}", e))?;
 
         conn.execute("PRAGMA foreign_keys = ON", [])
@@ -65,7 +64,36 @@ impl Database {
         Ok(Database { conn })
     }
 
-    // Email operations
+    // Get a random email from the database
+    pub fn get_random_email(&self, domains: &Vec<String>) -> Result<String, String> {
+        loop {
+            let mut rng = rng();
+            let username: String = (0..USERNAME_LEN)
+                .map(|_| {
+                    let idx = rng.random_range(0..CHARSET.len());
+                    CHARSET[idx] as char
+                })
+                .collect();
+
+            let domain = domains.choose(&mut rng).ok_or("No domains provided")?;
+            let email = format!("{}@{}", username, domain);
+            let result = self.get_email_by_address(&email);
+
+            match result {
+                Ok(None) => {
+                    return Ok(email);
+                }
+                Err(_) => {
+                    return Ok(email);
+                }
+                Ok(Some(_)) => {
+                    continue;
+                }
+            }
+        }
+    }
+
+    // Create an email
     pub fn create_email(
         &self,
         email: &str,
@@ -83,6 +111,7 @@ impl Database {
         self.get_email_by_id(id)
     }
 
+    // Get an email by id
     fn get_email_by_id(&self, id: i32) -> Result<Email, String> {
         let query = "SELECT * FROM emails WHERE id = ?1";
 
@@ -91,6 +120,7 @@ impl Database {
             .map_err(|e| format!("Failed to get email: {}", e))
     }
 
+    // Get an email by uuid
     pub fn get_email_by_uuid(&self, uuid: &Uuid) -> Result<Option<Email>, String> {
         let query = "SELECT * FROM emails WHERE uuid = ?1";
 
@@ -105,6 +135,7 @@ impl Database {
         }
     }
 
+    // Get an email by address
     pub fn get_email_by_address(&self, email: &str) -> Result<Option<Email>, String> {
         let query = "SELECT * FROM emails WHERE email = ?1";
 
@@ -118,6 +149,7 @@ impl Database {
         }
     }
 
+    // Delete an email by uuid
     pub fn delete_email(&self, uuid: &Uuid) -> Result<(), String> {
         let query = "DELETE FROM emails WHERE uuid = ?1";
 
@@ -149,6 +181,7 @@ impl Database {
         self.get_message_by_id(id)
     }
 
+    // Get a message by id
     fn get_message_by_id(&self, id: i32) -> Result<Message, String> {
         let query = "SELECT * FROM messages WHERE id = ?1";
 
@@ -157,6 +190,7 @@ impl Database {
             .map_err(|e| format!("Failed to get message: {}", e))
     }
 
+    // Get a message by uuid
     pub fn get_message_by_uuid(&self, uuid: &Uuid) -> Result<Option<Message>, String> {
         let query = "SELECT * FROM messages WHERE uuid = ?1";
 
@@ -171,6 +205,7 @@ impl Database {
         }
     }
 
+    // Get messages by email id
     pub fn get_messages_by_email_id(
         &self,
         email_id: i32,
@@ -191,6 +226,7 @@ impl Database {
         messages.map_err(|e| format!("Failed to process message: {}", e))
     }
 
+    // Delete a message by uuid
     pub fn delete_message(&self, uuid: &Uuid) -> Result<(), String> {
         let query = "DELETE FROM messages WHERE uuid = ?1";
 
@@ -200,7 +236,7 @@ impl Database {
             .map(|_| ())
     }
 
-    // Attachment operations
+    // Create an attachment
     pub fn create_attachment(
         &self,
         filename: &str,
@@ -230,6 +266,7 @@ impl Database {
         self.get_attachment_by_id(id)
     }
 
+    // Get an attachment by id
     fn get_attachment_by_id(&self, id: i32) -> Result<Attachment, String> {
         let query = "SELECT * FROM attachments WHERE id = ?1";
 
@@ -238,6 +275,7 @@ impl Database {
             .map_err(|e| format!("Failed to get attachment: {}", e))
     }
 
+    // Get an attachment by uuid
     pub fn get_attachment_by_uuid(
         &self,
         uuid: &Uuid,
@@ -255,6 +293,7 @@ impl Database {
         }
     }
 
+    // Get attachments by message id
     pub fn get_attachments_by_message_id(
         &self,
         message_id: i32,
@@ -275,6 +314,7 @@ impl Database {
         attachments.map_err(|e| format!("Failed to process attachment: {}", e))
     }
 
+    // Delete an attachment by uuid
     pub fn delete_attachment(&self, uuid: &Uuid) -> Result<(), String> {
         let query = "DELETE FROM attachments WHERE uuid = ?1";
 
@@ -284,7 +324,7 @@ impl Database {
             .map(|_| ())
     }
 
-    // Metadata operations
+    // Set an email metadata
     pub fn set_email_meta(
         &self,
         email_id: i32,

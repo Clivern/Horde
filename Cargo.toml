@@ -20,6 +20,7 @@ tokio = { version = "1.0", features = ["rt", "rt-multi-thread"] }
 toml = "0.9.5"
 uuid = { version = "1.18.1", features = ["v4", "serde"] }
 rusqlite = { version = "0.37.0", features = ["bundled", "chrono"] }
+rand = "0.9.2"
 
 
 [profile.release]

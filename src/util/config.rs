@@ -16,6 +16,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub db: String,
+    pub domains: Vec<String>,
 }
 
 pub fn get_env(key: &str, def: &str) -> String {
@@ -69,6 +70,13 @@ pub fn get_db_path() -> String {
     let config = get_configs(rocket_config.to_string());
 
     return config.global.db;
+}
+
+pub fn get_domains() -> Vec<String> {
+    let rocket_config = get_env("ROCKET_CONFIG", get_config_path().as_str());
+    let config = get_configs(rocket_config.to_string());
+
+    return config.global.domains;
 }
 
 #[test]
