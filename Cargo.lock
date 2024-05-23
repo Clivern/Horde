@@ -623,6 +623,8 @@ dependencies = [
  "serde_with",
  "tokio",
  "toml 0.9.7",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 

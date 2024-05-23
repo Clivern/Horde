@@ -58,7 +58,7 @@ pub fn up(db_path: &str) {
             filename             VARCHAR(255) NOT NULL,
             content_type         VARCHAR(100) NOT NULL,
             size                 INTEGER NOT NULL,
-            data                 BLOB NOT NULL,
+            path                 TEXT NOT NULL,
             message_id           INTEGER NOT NULL,
             inserted_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at           DATETIME DEFAULT CURRENT_TIMESTAMP,

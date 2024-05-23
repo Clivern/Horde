@@ -4,55 +4,58 @@
 
 use crate::db::client;
 use crate::util;
+use rocket::http::Status;
+use rocket::response::status;
 use rocket::serde::json::Json;
 use serde_json::json;
 
 #[post("/api/v1/email")]
-pub fn generate_random_email() -> Json<serde_json::Value> {
-    let client = client::Database::new(util::config::get_db_path().as_str());
+pub fn generate_random_email() -> Result<
+    status::Custom<Json<serde_json::Value>>,
+    status::Custom<Json<serde_json::Value>>,
+> {
+    let domains = util::config::get_domains();
 
-    match client {
-        Ok(client) => {
-            let email_result = client.get_random_email(&util::config::get_domains());
-
-            match email_result {
-                Ok(email) => {
-                    let record = client.create_email(
-                        &email,
-                        true,
-                        Some(chrono::Utc::now() + chrono::Duration::days(1)),
-                    );
-
-                    match record {
-                        Ok(email) => {
-                            return Json(json!({
-                                "id": email.id,
-                                "uuid": email.uuid.to_string(),
-                                "email": email.email.as_str(),
-                                "expire": email.expire,
-                                "expire_at": email.expire_at.unwrap().to_rfc3339(),
-                                "inserted_at": email.inserted_at.to_rfc3339(),
-                                "updated_at": email.updated_at.to_rfc3339(),
-                            }));
-                        }
-                        Err(_) => {
-                            return Json(json!({
-                                "errorMessage": "Error! Internal server error"
-                            }));
-                        }
-                    }
-                }
-                Err(_) => {
-                    return Json(json!({
-                        "errorMessage": "Error! Internal server error"
-                    }));
-                }
-            }
-        }
-        Err(_) => {
-            return Json(json!({
-                "errorMessage": "Error!Internal server error"
-            }));
-        }
+    if domains.is_empty() {
+        return Err(status::Custom(
+            Status::BadRequest,
+            Json(json!({ "errorMessage": "No domains configured" })),
+        ));
     }
+
+    let internal_error = || {
+        status::Custom(
+            Status::InternalServerError,
+            Json(json!({ "errorMessage": "Error! Internal server error" })),
+        )
+    };
+
+    let client = client::Database::new(util::config::get_db_path().as_str())
+        .map_err(|_| internal_error())?;
+
+    let email = client
+        .get_random_email(&domains)
+        .map_err(|_| internal_error())?;
+
+    let record = client
+        .create_email(
+            &email,
+            true,
+            Some(chrono::Utc::now() + chrono::Duration::days(1)),
+        )
+        .map_err(|_| internal_error())?
+        .unwrap();
+
+    Ok(status::Custom(
+        Status::Created,
+        Json(json!({
+            "id": record.id,
+            "uuid": record.uuid.to_string(),
+            "email": record.email,
+            "expire": record.expire,
+            "expireAt": record.expire_at.map(|dt| dt.to_rfc3339()),
+            "insertedAt": record.inserted_at.to_rfc3339(),
+            "updatedAt": record.updated_at.to_rfc3339(),
+        })),
+    ))
 }

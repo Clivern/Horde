@@ -43,7 +43,7 @@ pub struct Attachment {
     pub filename: String,
     pub content_type: String,
     pub size: i64,
-    pub data: Vec<u8>,
+    pub path: String,
     pub message_id: i32,
     pub inserted_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -54,6 +54,7 @@ pub struct Database {
 }
 
 impl Database {
+    // New database client
     pub fn new(db_path: &str) -> Result<Database, String> {
         let conn = Connection::open(db_path)
             .map_err(|e| format!("Unable to establish database connection! {}", e))?;
@@ -65,6 +66,8 @@ impl Database {
     }
 
     // Get a random email from the database
+    // @param domains: The domains to use
+    // @return: The random email
     pub fn get_random_email(&self, domains: &Vec<String>) -> Result<String, String> {
         loop {
             let mut rng = rng();
@@ -94,12 +97,16 @@ impl Database {
     }
 
     // Create an email
+    // @param email: The email to create
+    // @param expire: Whether the email should expire
+    // @param expire_at: The date and time the email should expire
+    // @return: The created email
     pub fn create_email(
         &self,
         email: &str,
         expire: bool,
         expire_at: Option<chrono::DateTime<chrono::Utc>>,
-    ) -> Result<Email, String> {
+    ) -> Result<Option<Email>, String> {
         let uuid = Uuid::new_v4();
         let query = "INSERT INTO emails (uuid, email, expire, expire_at) VALUES (?1, ?2, ?3, ?4)";
 
@@ -108,19 +115,29 @@ impl Database {
             .map_err(|e| format!("Failed to create email: {}", e))?;
 
         let id = self.conn.last_insert_rowid() as i32;
+
         self.get_email_by_id(id)
     }
 
     // Get an email by id
-    fn get_email_by_id(&self, id: i32) -> Result<Email, String> {
+    // @param id: The id of the email to get
+    // @return: The email
+    fn get_email_by_id(&self, id: i32) -> Result<Option<Email>, String> {
         let query = "SELECT * FROM emails WHERE id = ?1";
 
-        self.conn
+        match self
+            .conn
             .query_row(query, params![id], |row| self.row_to_email(row))
-            .map_err(|e| format!("Failed to get email: {}", e))
+        {
+            Ok(email) => Ok(Some(email)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(format!("Failed to get email: {}", e)),
+        }
     }
 
     // Get an email by uuid
+    // @param uuid: The uuid of the email to get
+    // @return: The email
     pub fn get_email_by_uuid(&self, uuid: &Uuid) -> Result<Option<Email>, String> {
         let query = "SELECT * FROM emails WHERE uuid = ?1";
 
@@ -136,6 +153,8 @@ impl Database {
     }
 
     // Get an email by address
+    // @param email: The address of the email to get
+    // @return: The email
     pub fn get_email_by_address(&self, email: &str) -> Result<Option<Email>, String> {
         let query = "SELECT * FROM emails WHERE email = ?1";
 
@@ -150,7 +169,9 @@ impl Database {
     }
 
     // Delete an email by uuid
-    pub fn delete_email(&self, uuid: &Uuid) -> Result<(), String> {
+    // @param uuid: The uuid of the email to delete
+    // @return: The result of the operation
+    pub fn delete_email_by_uuid(&self, uuid: &Uuid) -> Result<(), String> {
         let query = "DELETE FROM emails WHERE uuid = ?1";
 
         self.conn
@@ -159,14 +180,31 @@ impl Database {
             .map(|_| ())
     }
 
-    // Message operations
+    // Delete an email by id
+    // @param id: The id of the email to delete
+    // @return: The result of the operation
+    pub fn delete_email_by_id(&self, id: i32) -> Result<(), String> {
+        let query = "DELETE FROM emails WHERE id = ?1";
+
+        self.conn
+            .execute(query, params![id])
+            .map_err(|e| format!("Failed to delete email: {}", e))
+            .map(|_| ())
+    }
+
+    // Create a message
+    // @param from: The from address
+    // @param subject: The subject of the message
+    // @param content: The content of the message
+    // @param email_id: The id of the email
+    // @return: The created message
     pub fn create_message(
         &self,
         from: &str,
         subject: &str,
         content: &str,
         email_id: i32,
-    ) -> Result<Message, String> {
+    ) -> Result<Option<Message>, String> {
         let uuid = Uuid::new_v4();
         let query = "INSERT INTO messages (uuid, `from`, subject, content, email_id) VALUES (?1, ?2, ?3, ?4, ?5)";
 
@@ -182,15 +220,24 @@ impl Database {
     }
 
     // Get a message by id
-    fn get_message_by_id(&self, id: i32) -> Result<Message, String> {
+    // @param id: The id of the message to get
+    // @return: The message
+    fn get_message_by_id(&self, id: i32) -> Result<Option<Message>, String> {
         let query = "SELECT * FROM messages WHERE id = ?1";
 
-        self.conn
+        match self
+            .conn
             .query_row(query, params![id], |row| self.row_to_message(row))
-            .map_err(|e| format!("Failed to get message: {}", e))
+        {
+            Ok(message) => Ok(Some(message)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(format!("Failed to get message: {}", e)),
+        }
     }
 
     // Get a message by uuid
+    // @param uuid: The uuid of the message to get
+    // @return: The message
     pub fn get_message_by_uuid(&self, uuid: &Uuid) -> Result<Option<Message>, String> {
         let query = "SELECT * FROM messages WHERE uuid = ?1";
 
@@ -206,6 +253,8 @@ impl Database {
     }
 
     // Get messages by email id
+    // @param email_id: The id of the email to get messages for
+    // @return: The messages
     pub fn get_messages_by_email_id(
         &self,
         email_id: i32,
@@ -223,15 +272,29 @@ impl Database {
             .map_err(|e| format!("Failed to execute query: {}", e))?;
 
         let messages: Result<Vec<_>, _> = rows.collect();
+
         messages.map_err(|e| format!("Failed to process message: {}", e))
     }
 
     // Delete a message by uuid
-    pub fn delete_message(&self, uuid: &Uuid) -> Result<(), String> {
+    // @param uuid: The uuid of the message to delete
+    // @return: The result of the operation
+    pub fn delete_message_by_uuid(&self, uuid: &Uuid) -> Result<(), String> {
         let query = "DELETE FROM messages WHERE uuid = ?1";
 
         self.conn
             .execute(query, params![uuid.to_string()])
+            .map_err(|e| format!("Failed to delete message: {}", e))
+            .map(|_| ())
+    }
+
+    // Delete a message by id
+    // @param id: The id of the message to delete
+    // @return: The result of the operation
+    pub fn delete_message_by_id(&self, id: i32) -> Result<(), String> {
+        let query = "DELETE FROM messages WHERE id = ?1";
+        self.conn
+            .execute(query, params![id])
             .map_err(|e| format!("Failed to delete message: {}", e))
             .map(|_| ())
     }
@@ -246,7 +309,17 @@ impl Database {
     ) -> Result<Attachment, String> {
         let uuid = Uuid::new_v4();
         let size = data.len() as i64;
-        let query = "INSERT INTO attachments (uuid, filename, content_type, size, data, message_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
+        // Write file to disk under storage path using uuid for uniqueness
+        let storage_root = util::config::get_storage();
+        let attachment_dir = format!("{}attachments/{}", storage_root, uuid);
+        std::fs::create_dir_all(&attachment_dir)
+            .map_err(|e| format!("Failed to create attachment directory: {}", e))?;
+
+        let file_path = format!("{}/{}", attachment_dir, filename);
+        std::fs::write(&file_path, data)
+            .map_err(|e| format!("Failed to write attachment to disk: {}", e))?;
+
+        let query = "INSERT INTO attachments (uuid, filename, content_type, size, path, message_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
 
         self.conn
             .execute(
@@ -256,7 +329,7 @@ impl Database {
                     filename,
                     content_type,
                     size,
-                    data,
+                    file_path,
                     message_id
                 ],
             )
@@ -431,7 +504,7 @@ impl Database {
             filename: row.get("filename")?,
             content_type: row.get("content_type")?,
             size: row.get::<_, i64>("size")?,
-            data: row.get("data")?,
+            path: row.get("path")?,
             message_id: row.get("message_id")?,
             inserted_at: row.get("inserted_at")?,
             updated_at: row.get("updated_at")?,

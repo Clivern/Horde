@@ -12,7 +12,8 @@ use clap::Command;
 #[macro_use]
 extern crate rocket;
 
-fn main() {
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
     let matches = Command::new("🐺 Horde")
         .about("A Disposable, Secure, Anonymous Email Server, Set up in Minutes")
         .version("0.1.0")
@@ -48,9 +49,7 @@ fn main() {
     match matches.subcommand() {
         // app command
         Some(("app", _sub_matches)) => {
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(cmd::app::run());
+            cmd::app::run().await;
         }
 
         // migrate command
@@ -63,4 +62,5 @@ fn main() {
         Some(("smtp", _sub_matches)) => cmd::smtp::run(),
         _ => unreachable!(),
     }
+    Ok(())
 }
